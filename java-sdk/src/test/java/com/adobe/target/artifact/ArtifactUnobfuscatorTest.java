@@ -16,6 +16,7 @@
  */
 package com.adobe.target.artifact;
 
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,17 +25,26 @@ public class ArtifactUnobfuscatorTest {
 
   private static final String KEY = "test";
   private static final String CONTENT = "Hello World!";
-  private static final byte[] OBFUSCATED_CONTENT = {
-      65, 84, 79, 68, 58, 48, 48, 49, 46, 92, 106, 105, 81, 99, 44, 120, 48, 81,
-      123, 49, 37, 55, 87, 108, 55, 46, 54, 50, 85, 39, 104, 105, 39, 108, 95, 72,
-      50, 118, 126, 93, 60, 0, 31, 24, 65, 124, 61, 6, 35, 15, 72, 89
-  };
 
   private final ArtifactUnobfuscator artifactUnobfuscator = new ArtifactUnobfuscator();
+  private final byte[] obfuscatedContent;
+
+  public ArtifactUnobfuscatorTest() {
+    byte[] firstPart = KEY.getBytes(StandardCharsets.UTF_8);
+    byte[] secondPart = new byte[] {
+        65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
+        65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
+        65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
+        65, 65
+    };
+    byte[] key = artifactUnobfuscator.buildKey(firstPart, secondPart);
+    byte[] obfuscated = artifactUnobfuscator.xor(key, CONTENT.getBytes(StandardCharsets.UTF_8));
+    obfuscatedContent = artifactUnobfuscator.addHeaderAndVersion(secondPart, obfuscated);
+  }
 
   @Test
   void testUnobfucate() {
-    String result = artifactUnobfuscator.unobfuscate(KEY, OBFUSCATED_CONTENT);
+    String result = artifactUnobfuscator.unobfuscate(KEY, obfuscatedContent);
     assertEquals(result, CONTENT);
   }
 
@@ -49,8 +59,8 @@ public class ArtifactUnobfuscatorTest {
 
   @Test
   void throwExceptionBecauseOfInvalidVersion() {
-    byte[] badContent = new byte[OBFUSCATED_CONTENT.length];
-    System.arraycopy(OBFUSCATED_CONTENT, 0, badContent, 0, OBFUSCATED_CONTENT.length);
+    byte[] badContent = new byte[obfuscatedContent.length];
+    System.arraycopy(obfuscatedContent, 0, badContent, 0, obfuscatedContent.length);
     badContent[0] = 64;
 
     assertThrows(TargetInvalidArtifactException.class, () -> {
