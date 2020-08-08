@@ -87,4 +87,14 @@ public class ArtifactUnobfuscator {
     System.arraycopy(content, HEADER_VERSION.length + RANDOM_KEY_SIZE, result, 0, artifactSize);
     return result;
   }
+
+  protected byte[] addHeaderAndVersion(byte[] randomKey, byte[] content) {
+    byte[] result = new byte[HEADER_VERSION.length + randomKey.length + content.length];
+
+    System.arraycopy(HEADER_VERSION, 0, result, 0, HEADER_VERSION.length);
+    System.arraycopy(randomKey, 0, result, HEADER_VERSION.length, randomKey.length);
+    System.arraycopy(content, 0, result, HEADER_VERSION.length + randomKey.length, content.length);
+
+    return result;
+  }
 }
