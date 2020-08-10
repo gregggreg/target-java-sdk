@@ -21,30 +21,22 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ArtifactUnobfuscatorTest {
+public class ArtifactObfuscatorTest {
 
   private static final String KEY = "test";
   private static final String CONTENT = "Hello World!";
 
-  private final ArtifactUnobfuscator artifactUnobfuscator = new ArtifactUnobfuscator();
+  private final ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
   private final byte[] obfuscatedContent;
 
-  public ArtifactUnobfuscatorTest() {
-    byte[] firstPart = KEY.getBytes(StandardCharsets.UTF_8);
-    byte[] secondPart = new byte[] {
-        65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
-        65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
-        65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
-        65, 65
-    };
-    byte[] key = artifactUnobfuscator.buildKey(firstPart, secondPart);
-    byte[] obfuscated = artifactUnobfuscator.xor(key, CONTENT.getBytes(StandardCharsets.UTF_8));
-    obfuscatedContent = artifactUnobfuscator.addHeaderAndVersion(secondPart, obfuscated);
+  public ArtifactObfuscatorTest() {
+    String randomKey = "12345678901234567890123456789012";
+    obfuscatedContent = artifactObfuscator.obfuscate(KEY, randomKey, CONTENT.getBytes(StandardCharsets.UTF_8));
   }
 
   @Test
   void testUnobfucate() {
-    String result = artifactUnobfuscator.unobfuscate(KEY, obfuscatedContent);
+    String result = artifactObfuscator.unobfuscate(KEY, obfuscatedContent);
     assertEquals(result, CONTENT);
   }
 
@@ -53,7 +45,7 @@ public class ArtifactUnobfuscatorTest {
     byte[] badContent = { 65, 84, 79, 68, 58 };
 
     assertThrows(TargetInvalidArtifactException.class, () -> {
-      artifactUnobfuscator.unobfuscate(KEY, badContent);
+      artifactObfuscator.unobfuscate(KEY, badContent);
     });
   }
 
@@ -64,7 +56,7 @@ public class ArtifactUnobfuscatorTest {
     badContent[0] = 64;
 
     assertThrows(TargetInvalidArtifactException.class, () -> {
-      artifactUnobfuscator.unobfuscate(KEY, badContent);
+      artifactObfuscator.unobfuscate(KEY, badContent);
     });
   }
 

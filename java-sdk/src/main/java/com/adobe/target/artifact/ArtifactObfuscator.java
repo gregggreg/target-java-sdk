@@ -19,7 +19,7 @@ package com.adobe.target.artifact;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-public class ArtifactUnobfuscator {
+public class ArtifactObfuscator {
 
   private static final int RANDOM_KEY_SIZE = 32;
   private static final byte[] HEADER_VERSION = "ATOD:001".getBytes(StandardCharsets.UTF_8);
@@ -34,6 +34,15 @@ public class ArtifactUnobfuscator {
     byte[] obfuscatedArtifact = extractObfuscatedArtifact(content);
     byte[] result = xor(key, obfuscatedArtifact);
     return new String(result, StandardCharsets.UTF_8);
+  }
+
+  public byte[] obfuscate(String firstKey, String secondKey, byte[] content) {
+    byte[] firstPart = firstKey.getBytes(StandardCharsets.UTF_8);
+    byte[] secondPart = secondKey.getBytes(StandardCharsets.UTF_8);
+    byte[] key = buildKey(firstPart, secondPart);
+    byte[] encrypted = xor(key, content);
+
+    return addHeaderAndVersion(secondPart, encrypted);
   }
 
   protected byte[] buildKey(byte[] firstPart, byte[] secondPart) {
