@@ -12,6 +12,7 @@
 package com.adobe.target.edge.client.ondevice;
 
 import com.adobe.target.artifact.ArtifactObfuscator;
+import com.adobe.target.artifact.TargetInvalidArtifactException;
 import com.adobe.target.edge.client.ClientConfig;
 import com.adobe.target.edge.client.model.DecisioningMethod;
 import com.adobe.target.edge.client.model.ondevice.OnDeviceDecisioningRuleSet;
@@ -33,6 +34,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -291,4 +293,26 @@ class DefaultRuleLoaderTest {
         verify(exceptionHandler, never()).handleException(any(TargetClientException.class));
         defaultRuleLoader.stop();
     }
+
+    @Test
+    void testCorruptedArtifactPayload() {
+        DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
+        byte[] badArtifact = { 65, 65, 65 };
+
+        ClientConfig payloadClientConfig = ClientConfig.builder()
+            .client("emeaprod4")
+            .organizationId(TEST_ORG_ID)
+            .localEnvironment("production")
+            .defaultDecisioningMethod(DecisioningMethod.ON_DEVICE)
+            .exceptionHandler(exceptionHandler)
+            .onDeviceDecisioningHandler(executionHandler)
+            .onDeviceArtifactPayload(badArtifact)
+            .build();
+
+        assertThrows(TargetInvalidArtifactException.class, () -> {
+            defaultRuleLoader.start(payloadClientConfig);
+        });
+    }
+
+
 }
