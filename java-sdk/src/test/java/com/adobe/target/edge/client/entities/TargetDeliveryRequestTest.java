@@ -13,6 +13,7 @@ package com.adobe.target.edge.client.entities;
 
 import com.adobe.experiencecloud.ecid.visitor.CustomerState;
 import com.adobe.experiencecloud.ecid.visitor.VisitorState;
+import com.adobe.target.artifact.TargetInvalidArtifactException;
 import com.adobe.target.edge.client.ClientConfig;
 import com.adobe.target.edge.client.TargetClient;
 import com.adobe.target.edge.client.http.DefaultTargetHttpClient;
@@ -56,7 +57,7 @@ class TargetDeliveryRequestTest {
     private TargetClient targetJavaClient;
 
     @BeforeEach
-    void init() throws NoSuchFieldException {
+    void init() throws NoSuchFieldException, TargetInvalidArtifactException {
 
         Mockito.lenient().doReturn(getTestDeliveryResponse())
                 .when(defaultTargetHttpClient).execute(any(Map.class), any(String.class), any(DeliveryRequest.class),

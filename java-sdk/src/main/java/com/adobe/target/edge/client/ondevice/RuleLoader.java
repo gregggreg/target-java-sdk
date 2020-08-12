@@ -11,6 +11,7 @@
  */
 package com.adobe.target.edge.client.ondevice;
 
+import com.adobe.target.artifact.TargetInvalidArtifactException;
 import com.adobe.target.edge.client.ClientConfig;
 import com.adobe.target.edge.client.model.ondevice.OnDeviceDecisioningRuleSet;
 
@@ -18,7 +19,7 @@ import java.util.Date;
 
 public interface RuleLoader {
 
-    void start(ClientConfig clientConfig);
+    void start(ClientConfig clientConfig) throws TargetInvalidArtifactException;
 
     void stop();
 

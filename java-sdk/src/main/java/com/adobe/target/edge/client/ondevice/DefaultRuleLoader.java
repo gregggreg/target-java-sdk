@@ -12,6 +12,7 @@
 package com.adobe.target.edge.client.ondevice;
 
 import com.adobe.target.artifact.ArtifactObfuscator;
+import com.adobe.target.artifact.TargetInvalidArtifactException;
 import com.adobe.target.edge.client.ClientConfig;
 import com.adobe.target.edge.client.ClientProxyConfig;
 import com.adobe.target.edge.client.http.JacksonObjectMapper;
@@ -48,6 +49,9 @@ public class DefaultRuleLoader implements RuleLoader {
     private int numFetches = 0;
     private Date lastFetch = null;
 
+    private final ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
+    private final ObjectMapper objectMapper = new JacksonObjectMapper();
+
     public DefaultRuleLoader() {}
 
     @Override
@@ -56,7 +60,7 @@ public class DefaultRuleLoader implements RuleLoader {
     }
 
     @Override
-    public synchronized void start(final ClientConfig clientConfig) {
+    public synchronized void start(final ClientConfig clientConfig) throws TargetInvalidArtifactException {
         if (!clientConfig.isOnDeviceDecisioningEnabled()) {
             return;
         }
@@ -67,9 +71,8 @@ public class DefaultRuleLoader implements RuleLoader {
         byte[] artifactPayload = clientConfig.getOnDeviceArtifactPayload();
 
         if (artifactPayload != null) {
-            ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
-            String payload = artifactObfuscator.unobfuscate(clientConfig.getOrganizationId(), artifactPayload);
-            OnDeviceDecisioningRuleSet ruleSet = serializeToRuleSet(payload);
+            String payload = artifactObfuscator.deobfuscate(clientConfig.getOrganizationId(), artifactPayload);
+            OnDeviceDecisioningRuleSet ruleSet = deserializeToRuleSet(payload);
             String invalidMessage = invalidRuleSetMessage(ruleSet, null);
 
             if (invalidMessage == null) {
@@ -237,9 +240,8 @@ public class DefaultRuleLoader implements RuleLoader {
             }
 
             byte[] obfuscatedArtifact = response.getBody();
-            ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
-            String artifact = artifactObfuscator.unobfuscate(clientConfig.getOrganizationId(), obfuscatedArtifact);
-            OnDeviceDecisioningRuleSet ruleSet = serializeToRuleSet(artifact);
+            String artifact = artifactObfuscator.deobfuscate(clientConfig.getOrganizationId(), obfuscatedArtifact);
+            OnDeviceDecisioningRuleSet ruleSet = deserializeToRuleSet(artifact);
 
             String invalidMessage = invalidRuleSetMessage(ruleSet, response);
             if (invalidMessage == null) {
@@ -247,7 +249,7 @@ public class DefaultRuleLoader implements RuleLoader {
                 setLatestRules(ruleSet);
                 OnDeviceDecisioningHandler localHandler = clientConfig.getOnDeviceDecisioningHandler();
                 if (localHandler != null) {
-                    localHandler.artifactDownloadSucceeded(request == null ? null : request.asBytes().getBody());
+                    localHandler.artifactDownloadSucceeded(request == null ? null : obfuscatedArtifact);
                 }
                 logger.trace("rulesList={}", latestRules);
                 return true;
@@ -272,8 +274,7 @@ public class DefaultRuleLoader implements RuleLoader {
         }
     }
 
-    private OnDeviceDecisioningRuleSet serializeToRuleSet(String jsonString) {
-        ObjectMapper objectMapper = new JacksonObjectMapper();
+    private OnDeviceDecisioningRuleSet deserializeToRuleSet(String jsonString) {
         return objectMapper.readValue(jsonString, new GenericType<OnDeviceDecisioningRuleSet>() {});
     }
 

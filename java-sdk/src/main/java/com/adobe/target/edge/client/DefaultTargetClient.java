@@ -11,6 +11,7 @@
  */
 package com.adobe.target.edge.client;
 
+import com.adobe.target.artifact.TargetInvalidArtifactException;
 import com.adobe.target.delivery.v1.model.*;
 import com.adobe.target.edge.client.http.ResponseStatus;
 import com.adobe.target.edge.client.http.DefaultTargetHttpClient;
@@ -41,7 +42,7 @@ public class DefaultTargetClient implements TargetClient {
     private final String defaultPropertyToken;
     private final DecisioningMethod defaultDecisioningMethod;
 
-    DefaultTargetClient(ClientConfig clientConfig) {
+    DefaultTargetClient(ClientConfig clientConfig) throws TargetInvalidArtifactException {
         this.targetService = new DefaultTargetService(clientConfig);
         VisitorProvider.init(clientConfig.getOrganizationId());
         this.localService = new OnDeviceDecisioningService(clientConfig, this.targetService);

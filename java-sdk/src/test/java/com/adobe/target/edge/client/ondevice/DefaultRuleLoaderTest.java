@@ -14,6 +14,7 @@ package com.adobe.target.edge.client.ondevice;
 import com.adobe.target.artifact.ArtifactObfuscator;
 import com.adobe.target.artifact.TargetInvalidArtifactException;
 import com.adobe.target.edge.client.ClientConfig;
+import com.adobe.target.edge.client.http.JacksonObjectMapper;
 import com.adobe.target.edge.client.model.DecisioningMethod;
 import com.adobe.target.edge.client.model.ondevice.OnDeviceDecisioningRuleSet;
 import com.adobe.target.edge.client.model.ondevice.OnDeviceDecisioningHandler;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.FieldSetter;
 
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -171,8 +173,12 @@ class DefaultRuleLoaderTest {
     }
 
     @Test
-    void testDefaultRuleLoader() {
+    void testDefaultRuleLoader() throws TargetInvalidArtifactException, NoSuchFieldException {
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
+        ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
+        FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("artifactObfuscator"), artifactObfuscator);
+        ObjectMapper objectMapper = new JacksonObjectMapper();
+        FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("objectMapper"), objectMapper);
 
         String etag = "5b1cf3c050e1a0d16934922bf19ba6ea";
         Mockito.doReturn(null)
@@ -210,7 +216,7 @@ class DefaultRuleLoaderTest {
      }
 
     @Test
-    void testDefaultRuleLoaderNullResponse() {
+    void testDefaultRuleLoaderNullResponse() throws TargetInvalidArtifactException {
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
 
         Mockito.doReturn(null)
@@ -227,7 +233,7 @@ class DefaultRuleLoaderTest {
     }
 
     @Test
-    void testDefaultRuleLoaderInvalidVersion() {
+    void testDefaultRuleLoaderInvalidVersion() throws TargetInvalidArtifactException {
 
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
 
@@ -245,7 +251,7 @@ class DefaultRuleLoaderTest {
     }
 
     @Test
-    void testDefaultRuleLoaderInvalidStatus() {
+    void testDefaultRuleLoaderInvalidStatus() throws TargetInvalidArtifactException {
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
 
         Mockito.doReturn(null)
@@ -262,8 +268,12 @@ class DefaultRuleLoaderTest {
     }
 
     @Test
-    void testRuleLoaderArtifactPayload() {
+    void testRuleLoaderArtifactPayload() throws TargetInvalidArtifactException, NoSuchFieldException {
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
+        ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
+        FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("artifactObfuscator"), artifactObfuscator);
+        ObjectMapper objectMapper = new JacksonObjectMapper();
+        FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("objectMapper"), objectMapper);
 
         String etag = "5b1cf3c050e1a0d16934922bf19ba6ea";
         Mockito.doReturn(null)
@@ -295,8 +305,13 @@ class DefaultRuleLoaderTest {
     }
 
     @Test
-    void testCorruptedArtifactPayload() {
+    void testCorruptedArtifactPayload() throws NoSuchFieldException {
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
+        ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
+        FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("artifactObfuscator"), artifactObfuscator);
+        ObjectMapper objectMapper = new JacksonObjectMapper();
+        FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("objectMapper"), objectMapper);
+
         byte[] badArtifact = { 65, 65, 65 };
 
         ClientConfig payloadClientConfig = ClientConfig.builder()

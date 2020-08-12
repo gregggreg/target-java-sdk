@@ -24,7 +24,7 @@ public class ArtifactObfuscator {
   private static final int RANDOM_KEY_SIZE = 32;
   private static final byte[] HEADER_VERSION = "ATOD:001".getBytes(StandardCharsets.UTF_8);
 
-  public String unobfuscate(String obfuscationKey, byte[] content) throws TargetInvalidArtifactException {
+  public String deobfuscate(String obfuscationKey, byte[] content) throws TargetInvalidArtifactException {
     validateContent(content);
 
     byte[] firstPart = obfuscationKey.getBytes(StandardCharsets.UTF_8);

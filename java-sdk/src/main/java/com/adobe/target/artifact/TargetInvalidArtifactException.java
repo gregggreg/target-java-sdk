@@ -11,7 +11,7 @@
  */
 package com.adobe.target.artifact;
 
-public class TargetInvalidArtifactException extends RuntimeException {
+public class TargetInvalidArtifactException extends Throwable {
 
   public TargetInvalidArtifactException(String message) {
     super(message);

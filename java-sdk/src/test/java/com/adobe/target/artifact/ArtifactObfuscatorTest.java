@@ -35,8 +35,8 @@ public class ArtifactObfuscatorTest {
   }
 
   @Test
-  void testUnobfucate() {
-    String result = artifactObfuscator.unobfuscate(KEY, obfuscatedContent);
+  void testDeobfucate() throws TargetInvalidArtifactException {
+    String result = artifactObfuscator.deobfuscate(KEY, obfuscatedContent);
     assertEquals(result, CONTENT);
   }
 
@@ -45,7 +45,7 @@ public class ArtifactObfuscatorTest {
     byte[] badContent = { 65, 84, 79, 68, 58 };
 
     assertThrows(TargetInvalidArtifactException.class, () -> {
-      artifactObfuscator.unobfuscate(KEY, badContent);
+      artifactObfuscator.deobfuscate(KEY, badContent);
     });
   }
 
@@ -56,7 +56,7 @@ public class ArtifactObfuscatorTest {
     badContent[0] = 64;
 
     assertThrows(TargetInvalidArtifactException.class, () -> {
-      artifactObfuscator.unobfuscate(KEY, badContent);
+      artifactObfuscator.deobfuscate(KEY, badContent);
     });
   }
 
