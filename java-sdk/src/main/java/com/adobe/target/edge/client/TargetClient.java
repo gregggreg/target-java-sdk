@@ -11,7 +11,6 @@
  */
 package com.adobe.target.edge.client;
 
-import com.adobe.target.artifact.TargetInvalidArtifactException;
 import com.adobe.target.edge.client.http.ResponseStatus;
 import com.adobe.target.edge.client.model.TargetDeliveryResponse;
 import com.adobe.target.edge.client.model.TargetDeliveryRequest;
@@ -50,7 +49,7 @@ public interface TargetClient extends AutoCloseable {
      */
     CompletableFuture<Attributes> getAttributesAsync(TargetDeliveryRequest targetRequest, String ...mboxes);
 
-    static TargetClient create(ClientConfig config) throws TargetInvalidArtifactException {
+    static TargetClient create(ClientConfig config) {
         return new DefaultTargetClient(config);
     }
 

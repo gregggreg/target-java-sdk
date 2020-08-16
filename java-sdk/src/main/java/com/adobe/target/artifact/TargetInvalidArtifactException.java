@@ -11,7 +11,9 @@
  */
 package com.adobe.target.artifact;
 
-public class TargetInvalidArtifactException extends Throwable {
+import com.adobe.target.edge.client.service.TargetClientException;
+
+public class TargetInvalidArtifactException extends TargetClientException {
 
   public TargetInvalidArtifactException(String message) {
     super(message);

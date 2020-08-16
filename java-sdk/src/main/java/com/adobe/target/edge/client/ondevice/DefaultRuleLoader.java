@@ -60,7 +60,7 @@ public class DefaultRuleLoader implements RuleLoader {
     }
 
     @Override
-    public synchronized void start(final ClientConfig clientConfig) throws TargetInvalidArtifactException {
+    public synchronized void start(final ClientConfig clientConfig) {
         if (!clientConfig.isOnDeviceDecisioningEnabled()) {
             return;
         }
@@ -71,25 +71,34 @@ public class DefaultRuleLoader implements RuleLoader {
         byte[] artifactPayload = clientConfig.getOnDeviceArtifactPayload();
 
         if (artifactPayload != null) {
-            String payload = artifactObfuscator.deobfuscate(clientConfig.getOrganizationId(), artifactPayload);
-            OnDeviceDecisioningRuleSet ruleSet = deserializeToRuleSet(payload);
-            String invalidMessage = invalidRuleSetMessage(ruleSet, null);
+            try {
+                String payload = artifactObfuscator.deobfuscate(clientConfig.getOrganizationId(), artifactPayload);
+                OnDeviceDecisioningRuleSet ruleSet = deserializeToRuleSet(payload);
+                String invalidMessage = invalidRuleSetMessage(ruleSet, null);
 
-            if (invalidMessage == null) {
-                setLatestRules(ruleSet);
-                OnDeviceDecisioningHandler handler = clientConfig.getOnDeviceDecisioningHandler();
-                if (handler != null && !succeeded) {
-                    succeeded = true;
-                    handler.onDeviceDecisioningReady();
+                if (invalidMessage == null) {
+                    setLatestRules(ruleSet);
+                    OnDeviceDecisioningHandler handler = clientConfig.getOnDeviceDecisioningHandler();
+                    if (handler != null && !succeeded) {
+                        succeeded = true;
+                        handler.onDeviceDecisioningReady();
+                    }
                 }
-            }
-            else {
-                logger.warn(invalidMessage);
+                else {
+                    logger.warn(invalidMessage);
+                    TargetExceptionHandler handler = clientConfig.getExceptionHandler();
+                    if (handler != null) {
+                        handler.handleException(new TargetClientException(invalidMessage));
+                    }
+                }
+            } catch (TargetInvalidArtifactException exception) {
+                logger.error(exception.getMessage());
                 TargetExceptionHandler handler = clientConfig.getExceptionHandler();
                 if (handler != null) {
-                    handler.handleException(new TargetClientException(invalidMessage));
+                    handler.handleException(exception);
                 }
             }
+
         }
         started = true;
         retries = 0;

@@ -11,7 +11,6 @@
  */
 package com.adobe.target.edge.client.ondevice;
 
-import com.adobe.target.artifact.TargetInvalidArtifactException;
 import com.adobe.target.delivery.v1.model.*;
 import com.adobe.target.edge.client.ClientConfig;
 import com.adobe.target.edge.client.http.JacksonObjectMapper;
@@ -70,7 +69,7 @@ public class OnDeviceDecisioningService {
     private final OnDeviceDecisioningEvaluator onDeviceDecisioningEvaluator;
     private final GeoClient geoClient;
 
-    public OnDeviceDecisioningService(ClientConfig clientConfig, TargetService targetService) throws TargetInvalidArtifactException {
+    public OnDeviceDecisioningService(ClientConfig clientConfig, TargetService targetService) {
         this.mapper = new JacksonObjectMapper().getMapper();
         this.clientConfig = clientConfig;
         OnDeviceDecisioningServicesManager.OnDeviceDecisioningServices services =

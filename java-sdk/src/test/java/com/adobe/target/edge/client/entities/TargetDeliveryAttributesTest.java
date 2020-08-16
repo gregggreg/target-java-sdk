@@ -11,7 +11,6 @@
  */
 package com.adobe.target.edge.client.entities;
 
-import com.adobe.target.artifact.TargetInvalidArtifactException;
 import com.adobe.target.delivery.v1.model.*;
 import com.adobe.target.edge.client.Attributes;
 import com.adobe.target.edge.client.ClientConfig;
@@ -52,7 +51,7 @@ class TargetDeliveryAttributesTest {
 
     @BeforeEach
     @SuppressWarnings("unchecked")
-    void init() throws IOException, NoSuchFieldException, TargetInvalidArtifactException {
+    void init() throws IOException, NoSuchFieldException {
 
         Mockito.lenient().doReturn(getTestDeliveryResponse())
                 .when(defaultTargetHttpClient).execute(any(Map.class), any(String.class),

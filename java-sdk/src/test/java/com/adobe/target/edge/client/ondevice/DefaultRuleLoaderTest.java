@@ -173,7 +173,7 @@ class DefaultRuleLoaderTest {
     }
 
     @Test
-    void testDefaultRuleLoader() throws TargetInvalidArtifactException, NoSuchFieldException {
+    void testDefaultRuleLoader() throws NoSuchFieldException {
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
         ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
         FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("artifactObfuscator"), artifactObfuscator);
@@ -216,7 +216,7 @@ class DefaultRuleLoaderTest {
      }
 
     @Test
-    void testDefaultRuleLoaderNullResponse() throws TargetInvalidArtifactException {
+    void testDefaultRuleLoaderNullResponse() {
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
 
         Mockito.doReturn(null)
@@ -233,7 +233,7 @@ class DefaultRuleLoaderTest {
     }
 
     @Test
-    void testDefaultRuleLoaderInvalidVersion() throws TargetInvalidArtifactException {
+    void testDefaultRuleLoaderInvalidVersion() {
 
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
 
@@ -251,7 +251,7 @@ class DefaultRuleLoaderTest {
     }
 
     @Test
-    void testDefaultRuleLoaderInvalidStatus() throws TargetInvalidArtifactException {
+    void testDefaultRuleLoaderInvalidStatus() {
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
 
         Mockito.doReturn(null)
@@ -268,7 +268,7 @@ class DefaultRuleLoaderTest {
     }
 
     @Test
-    void testRuleLoaderArtifactPayload() throws TargetInvalidArtifactException, NoSuchFieldException {
+    void testRuleLoaderArtifactPayload() throws NoSuchFieldException {
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
         ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
         FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("artifactObfuscator"), artifactObfuscator);
@@ -312,6 +312,12 @@ class DefaultRuleLoaderTest {
         ObjectMapper objectMapper = new JacksonObjectMapper();
         FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("objectMapper"), objectMapper);
 
+        String etag = "5b1cf3c050e1a0d16934922bf19ba6ea";
+        Mockito.doReturn(null)
+            .when(defaultRuleLoader).generateRequest(any(ClientConfig.class));
+        Mockito.doReturn(getTestResponse(obfuscatedTestRuleSet, etag, HttpStatus.SC_OK))
+            .when(defaultRuleLoader).executeRequest(any());
+
         byte[] badArtifact = { 65, 65, 65 };
 
         ClientConfig payloadClientConfig = ClientConfig.builder()
@@ -324,10 +330,7 @@ class DefaultRuleLoaderTest {
             .onDeviceArtifactPayload(badArtifact)
             .build();
 
-        assertThrows(TargetInvalidArtifactException.class, () -> {
-            defaultRuleLoader.start(payloadClientConfig);
-        });
+        defaultRuleLoader.start(payloadClientConfig);
+        verify(exceptionHandler, timeout(1000)).handleException(any(TargetInvalidArtifactException.class));
     }
-
-
 }
