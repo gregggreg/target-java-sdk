@@ -90,13 +90,6 @@ public class ArtifactObfuscator {
     return result;
   }
 
-  private byte[] extractObfuscatedArtifact(byte[] content) {
-    int artifactSize = content.length - HEADER_VERSION.length - RANDOM_KEY_SIZE;
-    byte[] result = new byte[artifactSize];
-    System.arraycopy(content, HEADER_VERSION.length + RANDOM_KEY_SIZE, result, 0, artifactSize);
-    return result;
-  }
-
   protected byte[] addHeaderAndVersion(byte[] randomKey, byte[] content) {
     byte[] result = new byte[HEADER_VERSION.length + randomKey.length + content.length];
 
