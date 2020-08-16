@@ -30,9 +30,8 @@ public class ArtifactObfuscator {
     byte[] firstPart = obfuscationKey.getBytes(StandardCharsets.UTF_8);
     byte[] secondPart = extractRandomKey(content);
     byte[] key = buildKey(firstPart, secondPart);
+    byte[] result = xor(key, content, true);
 
-    byte[] obfuscatedArtifact = extractObfuscatedArtifact(content);
-    byte[] result = xor(key, obfuscatedArtifact);
     return new String(result, StandardCharsets.UTF_8);
   }
 
@@ -40,7 +39,7 @@ public class ArtifactObfuscator {
     byte[] firstPart = firstKey.getBytes(StandardCharsets.UTF_8);
     byte[] secondPart = secondKey.getBytes(StandardCharsets.UTF_8);
     byte[] key = buildKey(firstPart, secondPart);
-    byte[] encrypted = xor(key, content);
+    byte[] encrypted = xor(key, content, false);
 
     return addHeaderAndVersion(secondPart, encrypted);
   }
@@ -54,11 +53,12 @@ public class ArtifactObfuscator {
     return result;
   }
 
-  protected byte[] xor(byte[] key, byte[] content) {
-    byte[] result = new byte[content.length];
+  protected byte[] xor(byte[] key, byte[] content, boolean skipHeader) {
+    int headerLength = skipHeader ? HEADER_VERSION.length + RANDOM_KEY_SIZE : 0;
+    byte[] result = new byte[content.length - headerLength];
 
-    for (int i = 0; i < content.length; i++) {
-      result[i] = (byte) (content[i] ^ key[i % key.length]);
+    for (int i = headerLength, j = 0; i < content.length; i++, j++) {
+      result[j] = (byte) (content[i] ^ key[j % key.length]);
     }
 
     return result;
