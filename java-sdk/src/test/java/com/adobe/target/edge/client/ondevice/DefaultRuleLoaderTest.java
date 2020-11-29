@@ -11,27 +11,25 @@
  */
 package com.adobe.target.edge.client.ondevice;
 
+import com.adobe.target.artifact.ArtifactObfuscator;
+import com.adobe.target.artifact.TargetInvalidArtifactException;
 import com.adobe.target.edge.client.ClientConfig;
+import com.adobe.target.edge.client.http.JacksonObjectMapper;
 import com.adobe.target.edge.client.model.DecisioningMethod;
 import com.adobe.target.edge.client.model.ondevice.OnDeviceDecisioningRuleSet;
 import com.adobe.target.edge.client.model.ondevice.OnDeviceDecisioningHandler;
 import com.adobe.target.edge.client.service.TargetClientException;
 import com.adobe.target.edge.client.service.TargetExceptionHandler;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import kong.unirest.*;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.FieldSetter;
 
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -48,9 +46,25 @@ class DefaultRuleLoaderTest {
     static final String TEST_RULE_SET = "{\"version\":\"1.0.0\",\"meta\":{\"generatedAt\":\"2020-03-17T22:29:29.115Z\",\"remoteMboxes\":[\"recommendations\"],\"globalMbox\":\"target-global-mbox\"},\"rules\":{\"mboxes\":{\"product\":[{\"condition\":{\"and\":[{\"<\":[0,{\"var\":\"allocation\"},50]},{\"<=\":[1580371200000,{\"var\":\"current_timestamp\"},1600585200000]}]},\"consequence\":{\"mboxes\":[{\"options\":[{\"content\":{\"product\":\"default\"},\"type\":\"json\"}],\"metrics\":[{\"type\":\"display\",\"eventToken\":\"3eLgpLF+APtuSsE47wxq/mqipfsIHvVzTQxHolz2IpSCnQ9Y9OaLL2gsdrWQTvE54PwSz67rmXWmSnkXpSSS2Q==\"}],\"name\":\"product\"}]},\"meta\":{\"activityId\":317586,\"experienceId\":0,\"type\":\"ab\",\"mbox\":\"product\"}},{\"condition\":{\"and\":[{\"<\":[50,{\"var\":\"allocation\"},100]},{\"<=\":[1580371200000,{\"var\":\"current_timestamp\"},1600585200000]}]},\"consequence\":{\"mboxes\":[{\"options\":[{\"content\":{\"product\":\"new_layout\"},\"type\":\"json\"}],\"metrics\":[{\"type\":\"display\",\"eventToken\":\"3eLgpLF+APtuSsE47wxq/pNWHtnQtQrJfmRrQugEa2qCnQ9Y9OaLL2gsdrWQTvE54PwSz67rmXWmSnkXpSSS2Q==\"}],\"name\":\"product\"}]},\"meta\":{\"activityId\":317586,\"experienceId\":1,\"type\":\"ab\",\"mbox\":\"product\"}}]},\"views\":{}}}";
     static final String TEST_RULE_SET_HIGHER_VERSION = "{\"version\":\"2.0.0\",\"meta\":{\"generatedAt\":\"2020-03-17T22:29:29.115Z\",\"remoteMboxes\":[\"recommendations\"],\"globalMbox\":\"target-global-mbox\"},\"rules\":{\"mboxes\":{\"product\":[{\"condition\":{\"and\":[{\"<\":[0,{\"var\":\"allocation\"},50]},{\"<=\":[1580371200000,{\"var\":\"current_timestamp\"},1600585200000]}]},\"consequence\":{\"mboxes\":[{\"options\":[{\"content\":{\"product\":\"default\"},\"type\":\"json\"}],\"metrics\":[{\"type\":\"display\",\"eventToken\":\"3eLgpLF+APtuSsE47wxq/mqipfsIHvVzTQxHolz2IpSCnQ9Y9OaLL2gsdrWQTvE54PwSz67rmXWmSnkXpSSS2Q==\"}],\"name\":\"product\"}]},\"meta\":{\"activityId\":317586,\"experienceId\":0,\"type\":\"ab\",\"mbox\":\"product\"}},{\"condition\":{\"and\":[{\"<\":[50,{\"var\":\"allocation\"},100]},{\"<=\":[1580371200000,{\"var\":\"current_timestamp\"},1600585200000]}]},\"consequence\":{\"mboxes\":[{\"options\":[{\"content\":{\"product\":\"new_layout\"},\"type\":\"json\"}],\"metrics\":[{\"type\":\"display\",\"eventToken\":\"3eLgpLF+APtuSsE47wxq/pNWHtnQtQrJfmRrQugEa2qCnQ9Y9OaLL2gsdrWQTvE54PwSz67rmXWmSnkXpSSS2Q==\"}],\"name\":\"product\"}]},\"meta\":{\"activityId\":317586,\"experienceId\":1,\"type\":\"ab\",\"mbox\":\"product\"}}]},\"views\":{}}}";
 
+    private final byte[] obfuscatedTestRuleSet;
+    private final byte[] obfuscatedTestRuleSetHigherVersion;
+
     private TargetExceptionHandler exceptionHandler;
     private OnDeviceDecisioningHandler executionHandler;
     private ClientConfig clientConfig;
+
+    public DefaultRuleLoaderTest() {
+        String randomKey = "12345678901234567890123456789012";
+        ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
+        obfuscatedTestRuleSet = artifactObfuscator.obfuscate(
+            TEST_ORG_ID,
+            randomKey,
+            TEST_RULE_SET.getBytes(StandardCharsets.UTF_8));
+        obfuscatedTestRuleSetHigherVersion = artifactObfuscator.obfuscate(
+            TEST_ORG_ID,
+            randomKey,
+            TEST_RULE_SET_HIGHER_VERSION.getBytes(StandardCharsets.UTF_8));
+    }
 
     @BeforeEach
     void init() {
@@ -86,10 +100,11 @@ class DefaultRuleLoaderTest {
                 .exceptionHandler(exceptionHandler)
                 .onDeviceDecisioningHandler(executionHandler)
                 .build();
+
     }
 
-    static HttpResponse<OnDeviceDecisioningRuleSet> getTestResponse(final String ruleSet, final String etag, final int status) {
-        return new HttpResponse<OnDeviceDecisioningRuleSet>() {
+    static HttpResponse<byte[]> getTestResponse(final byte[] ruleSet, final String etag, final int status) {
+        return new HttpResponse<byte[]>() {
             @Override
             public int getStatus() {
                 return status;
@@ -110,21 +125,8 @@ class DefaultRuleLoaderTest {
             }
 
             @Override
-            public OnDeviceDecisioningRuleSet getBody() {
-                if (ruleSet == null) {
-                    return null;
-                }
-                ObjectMapper mapper = new ObjectMapper();
-                mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-                mapper.configure(JsonGenerator.Feature.IGNORE_UNKNOWN, true);
-                mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-                mapper.configure(DeserializationFeature.READ_ENUMS_USING_TO_STRING, true);
-                try {
-                    return mapper.readValue(ruleSet, new TypeReference<OnDeviceDecisioningRuleSet>() {
-                    });
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+            public byte[] getBody() {
+                return ruleSet;
             }
 
             @Override
@@ -133,27 +135,27 @@ class DefaultRuleLoaderTest {
             }
 
             @Override
-            public <V> V mapBody(Function<OnDeviceDecisioningRuleSet, V> func) {
+            public <V> V mapBody(Function<byte[], V> func) {
                 return null;
             }
 
             @Override
-            public <V> HttpResponse<V> map(Function<OnDeviceDecisioningRuleSet, V> func) {
+            public <V> HttpResponse<V> map(Function<byte[], V> func) {
                 return null;
             }
 
             @Override
-            public HttpResponse<OnDeviceDecisioningRuleSet> ifSuccess(Consumer<HttpResponse<OnDeviceDecisioningRuleSet>> consumer) {
+            public HttpResponse<byte[]> ifSuccess(Consumer<HttpResponse<byte[]>> consumer) {
                 return null;
             }
 
             @Override
-            public HttpResponse<OnDeviceDecisioningRuleSet> ifFailure(Consumer<HttpResponse<OnDeviceDecisioningRuleSet>> consumer) {
+            public HttpResponse<byte[]> ifFailure(Consumer<HttpResponse<byte[]>> consumer) {
                 return null;
             }
 
             @Override
-            public <E> HttpResponse<OnDeviceDecisioningRuleSet> ifFailure(Class<? extends E> errorClass, Consumer<HttpResponse<E>> consumer) {
+            public <E> HttpResponse<byte[]> ifFailure(Class<? extends E> errorClass, Consumer<HttpResponse<E>> consumer) {
                 return null;
             }
 
@@ -170,13 +172,17 @@ class DefaultRuleLoaderTest {
     }
 
     @Test
-    void testDefaultRuleLoader() {
+    void testDefaultRuleLoader() throws NoSuchFieldException {
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
+        ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
+        FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("artifactObfuscator"), artifactObfuscator);
+        ObjectMapper objectMapper = new JacksonObjectMapper();
+        FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("objectMapper"), objectMapper);
 
         String etag = "5b1cf3c050e1a0d16934922bf19ba6ea";
         Mockito.doReturn(null)
                 .when(defaultRuleLoader).generateRequest(any(ClientConfig.class));
-        Mockito.doReturn(getTestResponse(TEST_RULE_SET, etag, HttpStatus.SC_OK))
+        Mockito.doReturn(getTestResponse(obfuscatedTestRuleSet, etag, HttpStatus.SC_OK))
                 .when(defaultRuleLoader).executeRequest(any());
 
         defaultRuleLoader.start(clientConfig);
@@ -200,7 +206,7 @@ class DefaultRuleLoaderTest {
         rules = defaultRuleLoader.getLatestRules();
         assertNotNull(rules);
 
-        Mockito.doReturn(getTestResponse(TEST_RULE_SET, "5b1cf3c050e1a0d16934922bf19ba6ea", HttpStatus.SC_NOT_MODIFIED))
+        Mockito.doReturn(getTestResponse(obfuscatedTestRuleSet, "5b1cf3c050e1a0d16934922bf19ba6ea", HttpStatus.SC_NOT_MODIFIED))
                 .when(defaultRuleLoader).executeRequest(any());
 
         defaultRuleLoader.refresh();
@@ -232,7 +238,7 @@ class DefaultRuleLoaderTest {
 
         Mockito.doReturn(null)
                 .when(defaultRuleLoader).generateRequest(any(ClientConfig.class));
-        Mockito.doReturn(getTestResponse(TEST_RULE_SET_HIGHER_VERSION, "5b1cf3c050e1a0d16934922bf19ba6ea", HttpStatus.SC_OK))
+        Mockito.doReturn(getTestResponse(obfuscatedTestRuleSetHigherVersion, "5b1cf3c050e1a0d16934922bf19ba6ea", HttpStatus.SC_OK))
                 .when(defaultRuleLoader).executeRequest(any());
 
         defaultRuleLoader.start(clientConfig);
@@ -249,7 +255,7 @@ class DefaultRuleLoaderTest {
 
         Mockito.doReturn(null)
                 .when(defaultRuleLoader).generateRequest(any(ClientConfig.class));
-        Mockito.doReturn(getTestResponse(TEST_RULE_SET, "5b1cf3c050e1a0d16934922bf19ba6ea", HttpStatus.SC_NOT_FOUND))
+        Mockito.doReturn(getTestResponse(obfuscatedTestRuleSet, "5b1cf3c050e1a0d16934922bf19ba6ea", HttpStatus.SC_NOT_FOUND))
                 .when(defaultRuleLoader).executeRequest(any());
 
         defaultRuleLoader.start(clientConfig);
@@ -261,13 +267,17 @@ class DefaultRuleLoaderTest {
     }
 
     @Test
-    void testRuleLoaderArtifactPayload() {
+    void testRuleLoaderArtifactPayload() throws NoSuchFieldException {
         DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
+        ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
+        FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("artifactObfuscator"), artifactObfuscator);
+        ObjectMapper objectMapper = new JacksonObjectMapper();
+        FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("objectMapper"), objectMapper);
 
         String etag = "5b1cf3c050e1a0d16934922bf19ba6ea";
         Mockito.doReturn(null)
                 .when(defaultRuleLoader).generateRequest(any(ClientConfig.class));
-        Mockito.doReturn(getTestResponse(TEST_RULE_SET, etag, HttpStatus.SC_OK))
+        Mockito.doReturn(getTestResponse(obfuscatedTestRuleSet, etag, HttpStatus.SC_OK))
                 .when(defaultRuleLoader).executeRequest(any());
 
         ClientConfig payloadClientConfig = ClientConfig.builder()
@@ -277,7 +287,7 @@ class DefaultRuleLoaderTest {
                 .defaultDecisioningMethod(DecisioningMethod.ON_DEVICE)
                 .exceptionHandler(exceptionHandler)
                 .onDeviceDecisioningHandler(executionHandler)
-                .onDeviceArtifactPayload(TEST_RULE_SET.getBytes(StandardCharsets.UTF_8))
+                .onDeviceArtifactPayload(obfuscatedTestRuleSet)
                 .build();
 
         defaultRuleLoader.start(payloadClientConfig);
@@ -291,5 +301,35 @@ class DefaultRuleLoaderTest {
         defaultRuleLoader.refresh();
         verify(exceptionHandler, never()).handleException(any(TargetClientException.class));
         defaultRuleLoader.stop();
+    }
+
+    @Test
+    void testCorruptedArtifactPayload() throws NoSuchFieldException {
+        DefaultRuleLoader defaultRuleLoader = mock(DefaultRuleLoader.class, CALLS_REAL_METHODS);
+        ArtifactObfuscator artifactObfuscator = new ArtifactObfuscator();
+        FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("artifactObfuscator"), artifactObfuscator);
+        ObjectMapper objectMapper = new JacksonObjectMapper();
+        FieldSetter.setField(defaultRuleLoader, DefaultRuleLoader.class.getDeclaredField("objectMapper"), objectMapper);
+
+        String etag = "5b1cf3c050e1a0d16934922bf19ba6ea";
+        Mockito.doReturn(null)
+            .when(defaultRuleLoader).generateRequest(any(ClientConfig.class));
+        Mockito.doReturn(getTestResponse(obfuscatedTestRuleSet, etag, HttpStatus.SC_OK))
+            .when(defaultRuleLoader).executeRequest(any());
+
+        byte[] badArtifact = { 65, 65, 65 };
+
+        ClientConfig payloadClientConfig = ClientConfig.builder()
+            .client("emeaprod4")
+            .organizationId(TEST_ORG_ID)
+            .localEnvironment("production")
+            .defaultDecisioningMethod(DecisioningMethod.ON_DEVICE)
+            .exceptionHandler(exceptionHandler)
+            .onDeviceDecisioningHandler(executionHandler)
+            .onDeviceArtifactPayload(badArtifact)
+            .build();
+
+        defaultRuleLoader.start(payloadClientConfig);
+        verify(exceptionHandler, timeout(1000)).handleException(any(TargetInvalidArtifactException.class));
     }
 }
